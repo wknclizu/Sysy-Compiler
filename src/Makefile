@@ -2,7 +2,7 @@ target=parser
 objs=ast.o parser.o printer.o tokens.o main.o 
 CC=g++
 CXXFLAGS += -std=c++17
-YACC=yacc
+YACC=bison
 
 $(target):${objs}
 	$(CC) -o $(target)  $(objs) 
