@@ -43,13 +43,13 @@ GT : '>';
 GE : '>=';
 
 // integer literal
-// INT_OCT_LIT : 0[1-7]+;
-// INT_DEC_LIT : [1-9][0-9]*;
-// INT_HEX_LIT : (0x|0X)[0-9a-zA-Z]+;
-// INT_LIT : INT_OCT_LIT|INT_DEC_LIT|INT_HEX_LIT;
+INT_OCT_LIT : '0'[1-7]+;
+INT_DEC_LIT : [1-9][0-9]*;
+INT_HEX_LIT : ('0x'|'0X')[0-9a-zA-Z]+;
+INT_LIT : INT_OCT_LIT|INT_DEC_LIT|INT_HEX_LIT;
 
 // float literal
-FLOAT_
+FLOAT_LIT : '1';
 
 // fragment for float literal
 
