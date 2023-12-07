@@ -19,10 +19,15 @@ int main(int argc, const char* argv[]) {
     tokens.fill();
    
     for (auto token : tokens.getTokens()) {
-  
+        if (token->getType() == -1) continue;
+        if (token->getType() != 46) {
+            std::cout<< token->getText()<< " : "<< tokenTypeName[token->getType()]<< std::endl;
+        } else {
+            std::cout<< "Lexical error - line "<< token->getLine()<< " : "<< token->getText()<< std::endl;
+        }
         //简单粗暴的输出token信息并不符合题目要求
         // std::cout<< tokenTypeName[token->getType()]<< std::endl;
-        std::cout << token->toString() << std::endl;
+        // std::cout << token->toString() << std::endl;
     }
 
     /* 语法分析

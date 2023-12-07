@@ -6,7 +6,8 @@ std::string tokenTypeName[] = {"", "INT", "FLOAT", "VOID", "CONST", "RETURN", "I
     "LB", "RB", "LC", "RC", "COMMA", "SEMICOLON", "QUESTION", 
     "COLON", "MINUS", "NOT", "ASSIGN", "ADD", "MUL", "DIV", 
     "MOD", "AND", "OR", "EQ", "NEQ", "LT", "LE", "GT", 
-    "GE", "INT_LIT", "FLOAT_LIT", "ID", "STRING", "", 
-    "", "", "LEX_ERR"};
+    "GE", "INT_LIT", 
+    "FLOAT_LIT", "FLOAT_EXP_LIT", "FLOAT_POINT_LIT", "ID", "STRING", 
+    "", "", "", "", "LEX_ERR"};
 
 

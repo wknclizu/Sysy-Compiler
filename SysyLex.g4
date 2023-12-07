@@ -43,16 +43,15 @@ GT : '>';
 GE : '>=';
 
 // integer literal
-INT_OCT_LIT : '0'[1-7]+;
-INT_DEC_LIT : [1-9][0-9]*;
-INT_HEX_LIT : ('0x'|'0X')[0-9a-zA-Z]+;
-INT_LIT : INT_OCT_LIT|INT_DEC_LIT|INT_HEX_LIT;
+INT_LIT : '0'[1-7]+|[1-9][0-9]*|('0x'|'0X')[0-9a-zA-Z]+;
 
 // float literal
-FLOAT_LIT : '1';
+// connect 2 no-delim? TODO
+FLOAT_LIT : [0-9]*(FLOAT_EXP_LIT|FLOAT_EXP_LIT FLOAT_POINT_LIT|FLOAT_POINT_LIT)[fF]?;
 
 // fragment for float literal
-
+FLOAT_EXP_LIT : [Ee][+-]?[0-9]+;
+FLOAT_POINT_LIT : '.'[0-9]+;
 
 // identifier
 ID : [_a-zA-Z][_a-zA-Z0-9]*;
@@ -74,4 +73,4 @@ WS :
 LINE_COMMENT : '//' .*? '\r'? '\n' -> skip;
 BLOCK_COMMENT : '/*'.*?'*/'-> skip ;
 
-
+LEX_ERR : [0-9][0-9a-zA-Z]+;
