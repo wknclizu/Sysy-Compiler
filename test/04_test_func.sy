@@ -1,0 +1,13 @@
+int f1(int a) {
+    return a;
+}
+
+void f2() {}
+
+float f3() {
+    return 3.0;
+}
+
+int main() {
+    return 0;
+}
