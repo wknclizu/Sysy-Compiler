@@ -343,10 +343,29 @@ BlockItem:	 Decl {
 // | 'break' ';' | 'continue' ';'
 // | 'return' [Exp] ';'
 
+ Stmt: LVal ASSIGN Exp SEMICOLON  { $$ = nullptr; }
+ 	|  Exp SEMICOLON  { $$ = nullptr; }
+	|  SEMICOLON  { $$ = nullptr; }
+	|  Block  { $$ = nullptr; }
+	// |  IF LP Cond RP Stmt  { $$ = nullptr; }
+ 	|  IF LP Cond RP Stmt ELSE Stmt  { $$ = nullptr; }
+ 	|  IF LP Cond RP Stmt %prec LOWER_THEN_ELSE { $$ = nullptr; }
+	|  WHILE LP Cond RP Stmt  { $$ = nullptr; }
+	|  BREAK SEMICOLON  { $$ = nullptr; }
+	|  CONTINUE SEMICOLON { $$ = nullptr; }
+	|  RETURN SEMICOLON  { $$ = nullptr; }
+	|  RETURN Exp SEMICOLON { $$ = nullptr; }
+	;
 
 
-
-
+// Stmt:	 LVal ASSIGN {
+// 				$$ = $1;
+// 			}
+// 			;
+// Stmt:	Exp {
+// 			$$ = new InitValAST();
+// 			$$->exp = unique_ptr<AddExpAST>($1);
+// 		}		;
 
 
 
