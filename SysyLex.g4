@@ -1,76 +1,86 @@
-
 lexer grammar SysyLex;
 
-// keyword
-INT : 'int';
-FLOAT : 'float';
-VOID : 'void';
-CONST : 'const';
-RETURN : 'return';
-IF : 'if';
-ELSE : 'else';
-WHILE : 'while';
-BREAK : 'break';
-CONTINUE : 'continue'; 
+fragment HexPrefix
+    : '0x'
+    | '0X'
+    ;
+fragment OctPrefix : '0';
 
-// delimeter
-LP : '(' ;
-RP : ')' ;
-LB : '[' ;
-RB : ']' ;
-LC : '{' ;
-RC : '}' ;
-COMMA : ',' ;
-SEMICOLON : ';';
-QUESTION : '?';
-COLON : ':';
+fragment NonzeroDigit : [1-9];
+fragment Digit : [0-9];
+fragment HexDigit : [0-9a-fA-F];
+fragment OctDegit : [0-7];
 
-// operator
-MINUS : '-';
-NOT : '!';
-ASSIGN : '=';
-ADD : '+';
-MUL : '*';
-DIV : '/';
-MOD : '%';
-AND : '&&';
-OR : '||';
-EQ : '==';
-NEQ : '!=';
-LT : '<';
-LE : '<=';
-GT : '>';
-GE : '>=';
+DecIntConst : NonzeroDigit Digit*;
+OctIntConst : OctPrefix OctDegit*;
+HexIntConst : HexPrefix HexDigit+;
 
-// integer literal
-INT_LIT : '0'[1-7]+|[1-9][0-9]*|('0x'|'0X')[0-9a-zA-Z]+;
+fragment Dot : '.';
 
-// float literal
-// connect 2 no-delim? TODO
-FLOAT_LIT : [0-9]*(FLOAT_EXP_LIT|FLOAT_EXP_LIT FLOAT_POINT_LIT|FLOAT_POINT_LIT)[fF]?;
+fragment Sign : '+' | '-' ;
 
-// fragment for float literal
-FLOAT_EXP_LIT : [Ee][+-]?[0-9]+;
-FLOAT_POINT_LIT : '.'[0-9]+;
+fragment Exponent : 'e' | 'E' ;
+fragment HexExponent : 'p' | 'P' ;
 
-// identifier
-ID : [_a-zA-Z][_a-zA-Z0-9]*;
+fragment DecFloatFrac : Digit* Dot Digit+ | Digit+ Dot   ;
+fragment HexFloatFrac : HexDigit* Dot HexDigit+ | HexDigit+ Dot ;
 
-// ID : 'main"
-// string
-STRING : '"'(ESC|.)*?'"';
+fragment DecFloatExp : Exponent Sign? Digit+;
+fragment BinFloatExp : HexExponent Sign? Digit+;
 
-// fragment for string
-
-ESC : '\\"'|'\\\\';
-
-// whitespace
-WS : 
-    [ \t\r\n] -> skip
+DecFloatConst : DecFloatFrac DecFloatExp? | Digit+ DecFloatExp ;
+HexFloatConst : HexPrefix HexFloatFrac BinFloatExp
+    | HexPrefix HexDigit+ BinFloatExp
     ;
 
-// comments
-LINE_COMMENT : '//' .*? '\r'? '\n' -> skip;
-BLOCK_COMMENT : '/*'.*?'*/'-> skip ;
+fragment Escaped : '\\'['"?\\abfnrtv];
 
-LEX_ERR : [0-9][0-9a-zA-Z]+;
+StringConst : '"' (~['"\\\r\n] | Escaped)* '"';
+
+Int : 'int';
+Float : 'float';
+Void : 'void';
+
+Const : 'const';
+
+If : 'if';
+Else : 'else';
+While : 'while';
+Break : 'break';
+Continue : 'continue';
+Return : 'return';
+
+Assign : '=';
+
+Add : '+';
+Sub : '-';
+Mul : '*';
+Div : '/';
+Mod : '%';
+
+Eq : '==';
+Neq : '!=';
+Lt : '<';
+Gt : '>';
+Leq : '<=';
+Geq : '>=';
+
+Not : '!';
+And : '&&';
+Or : '||';
+
+Comma : ',';
+Semicolon : ';';
+Lparen : '(';
+Rparen : ')';
+Lbracket : '[';
+Rbracket : ']';
+Lbrace : '{';
+Rbrace : '}';
+
+Ident : [A-Za-z_][_0-9A-Za-z]*;
+
+Whitespace : [ \t\r\n]+ -> skip;
+
+LineComment : '//' ~[\r\n]* -> skip;
+BlockComment : '/*' .*? '*/' -> skip;
