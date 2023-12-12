@@ -4,6 +4,9 @@ CXXFLAGS += -std=c++17  -g -w
 LIBS += -lantlr4-runtime
 HEADERS += -I/usr/include/antlr4-runtime/
 
+# Grammer files
+LEXS = Sysy.g4 SysyLex.g4
+
 # Source files
 SRCS = main.cpp ast.cpp AstVisitor.cpp SysyBaseListener.cpp SysyBaseVisitor.cpp SysyLexer.cpp SysyListener.cpp SysyParser.cpp SysyVisitor.cpp
 
@@ -16,10 +19,13 @@ all: $(target)
 $(target): $(OBJS)
 	$(CC) -o $@ $(OBJS) $(LIBS) $(HEADERS)
 
+SysyLexer.cpp: $(LEXS)
+	java -jar ../antlr-4.9.3-complete.jar Sysy.g4 -Dlanguage=Cpp -listener -visitor -o .
+
 %.o: %.cpp
 	$(CC) -c $< -o $@ $(CXXFLAGS) $(HEADERS)
 
 .PHONY: clean
 clean:
-	rm -f $(OBJS) Sysy*.* parser
+	rm -f $(OBJS) Sysy*.cpp Sysy*.h parser
     
