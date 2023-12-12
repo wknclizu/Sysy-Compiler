@@ -8,7 +8,7 @@ HEADERS += -I/usr/include/antlr4-runtime/
 LEXS = Sysy.g4 SysyLex.g4
 
 # Source files
-SRCS = main.cpp ast.cpp AstVisitor.cpp SysyBaseListener.cpp SysyBaseVisitor.cpp SysyLexer.cpp SysyListener.cpp SysyParser.cpp SysyVisitor.cpp
+SRCS = SysyLexer.cpp main.cpp ast.cpp AstVisitor.cpp SysyBaseListener.cpp SysyBaseVisitor.cpp SysyListener.cpp SysyParser.cpp SysyVisitor.cpp
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)
