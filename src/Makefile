@@ -2,7 +2,7 @@ target=parser
 CC=g++
 CXXFLAGS += -std=c++17  -g -w
 LIBS += -lantlr4-runtime
-HEADERS += -I/usr/include/antlr4-runtime/
+HEADERS += -I/home/wknclizu/Downloads/antlr4-cpp-runtime-4.9.3-source/runtime/src
 
 # Grammer files
 LEXS = Sysy.g4 SysyLex.g4
