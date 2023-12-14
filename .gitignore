@@ -1,2 +1,3 @@
 src/Makefile
-src/Makefile
+src/parser
+*.o
