@@ -13,7 +13,7 @@ enum class ErrorType {
   ArrayIndexNotInt,
   BreakNotInLoop,
   ContinueNotInLoop,
-  VisitVariableError,
+  VisitVariableError
 };
 
 /**

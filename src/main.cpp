@@ -55,12 +55,15 @@ int main(int argc, const char* argv[]) {
     // string output_file_name = string(argv[1]) + ".ast.txt";
     // ofstream of;
     // of.open(output_file_name);
-    ast->print(std::cout,0);   //打印AST
 
-    
+    // check fault
     ErrorReporter err(cerr);
     AstChecker checker(err);
     checker.visit_compile_unit(*ast);
+    
+    // print ast
+    ast->print(std::cout,0);   //打印AST
+
     
     return 0;
 }
