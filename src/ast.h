@@ -27,6 +27,10 @@ namespace frontend {
 
             Type type() const { return m_type; }
 
+            bool operator==(const ScalarType &rhs) const {
+                return this->m_type == rhs.m_type;
+            }
+
         private:
             Type m_type;
         };
@@ -64,6 +68,14 @@ namespace frontend {
             void print(std::ostream &out, unsigned indent) const override;
 
             const std::string &name() const { return m_name; }
+
+            bool operator==(const Identifier &rhs) const {
+                return this->m_name == rhs.m_name;
+            }
+
+            bool operator<(const Identifier &rhs) const {
+                return this->m_name < rhs.m_name;
+            }
 
         private:
             std::string m_name;
@@ -429,6 +441,16 @@ namespace frontend {
                 return m_params;
             }
             const std::unique_ptr<Block> &body() const { return m_body; }
+
+            bool operator==(const Function &rhs) const {
+                // this->m_params == rhs.m_params &&
+                return this->m_ident == rhs.m_ident &&
+                       this->m_body == rhs.m_body;
+            }
+            // TODO: check if this is correct
+            bool operator<(const Function &rhs) const {
+                return this->m_ident < rhs.m_ident;
+            }
 
         private:
             std::unique_ptr<ScalarType> m_type;
