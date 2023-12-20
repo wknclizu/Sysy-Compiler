@@ -8,12 +8,16 @@ enum class ErrorType {
   VarDuplicated,
   FuncUnknown,
   FuncDuplicated,
+  CallVarAsFunc,
+  IncorrectUseOfFuncName,
+  IncorrectUseOfArray,
+  ArrayAccessOnNonArray,
   FuncParamsNotMatch,
   FuncReturnTypeNotMatch,
   ArrayIndexNotInt,
   BreakNotInLoop,
   ContinueNotInLoop,
-  VisitVariableError
+  VisitVariableError,
 };
 
 /**

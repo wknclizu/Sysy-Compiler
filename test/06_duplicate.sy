@@ -7,7 +7,12 @@ int func(int a, int b, int c) {
     return 1;
 }
 
+int func() {
+    return 2;
+}
+
 int main() {
-    c = func(a, b, a);
+    c = a(a, b, a);
+    
     return 0;
 }

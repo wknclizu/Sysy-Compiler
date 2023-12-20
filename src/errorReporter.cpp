@@ -8,7 +8,7 @@ ErrorReporter::ErrorReporter(std::ostream &error_stream) : err(error_stream) {}
 //}
 
 void ErrorReporter::error(ErrorType type, const std::string &ast) {
-  std::string error_msg = "Error: ";
+  std::string error_msg = "Error type " + std::to_string(static_cast<int>(type)) + ": ";
   switch (type) {
   case ErrorType::VarUnknown:
     error_msg += "Use Undefined Variable";
@@ -24,6 +24,22 @@ void ErrorReporter::error(ErrorType type, const std::string &ast) {
     break;
   case ErrorType::FuncDuplicated:
     error_msg += "Redefined Function";
+    std::cerr << error_msg + " \"" + ast + "\"." << std::endl;
+    break;
+  case ErrorType::CallVarAsFunc:
+    error_msg += "Call Variable as Function";
+    std::cerr << error_msg + " \"" + ast + "\"." << std::endl;
+    break;
+  case ErrorType::IncorrectUseOfFuncName:
+    error_msg += "Incorrect Use of Function Name";
+    std::cerr << error_msg + " \"" + ast + "\"." << std::endl;
+    break;
+  case ErrorType::IncorrectUseOfArray:
+    error_msg += "Incorrect Use of Array";
+    std::cerr << error_msg + " \"" + ast + "\"." << std::endl;
+    break;
+  case ErrorType::ArrayAccessOnNonArray:
+    error_msg += "Use Non-Array Variable as Array";
     std::cerr << error_msg + " \"" + ast + "\"." << std::endl;
     break;
   case ErrorType::FuncParamsNotMatch:
