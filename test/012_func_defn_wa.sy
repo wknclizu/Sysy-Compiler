@@ -11,6 +11,6 @@ int main(){
 	int b;
 	int b;
 	a = 10;
-	b = func(a);
+	b = fun(a);
 	return b;
 }

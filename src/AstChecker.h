@@ -17,25 +17,25 @@ namespace frontend {
 
         explicit AstChecker(ErrorReporter &);
         void visit_compile_unit(ast::CompileUnit &);
-        void visit_block(ast::Block &, std::vector<VarM *> &, std::vector<FunM *> &);
-        void visit_statement(ast::Statement &, std::vector<VarM *> &, std::vector<FunM *> &);
+        void visit_block(ast::Block &);
+        void visit_statement(ast::Statement &);
+        void visit_func(ast::Function &);
     private:
-        /**
-         * @brief  check whether a variable is declared
-         */
-        auto is_declared(const ast::Identifier &, std::vector<VarM *> &) const -> bool;
 
-        /**
-         * @brief check whether a function is declared, DID NOT check the parameter
-         */
-        auto is_func_declared(const ast::Identifier &, std::vector<FunM *> &) const -> bool;
+        std::vector<std::map<ast::Identifier,int>> m_var;
+        std::map<ast::Identifier,int> m_func;
 
+        int get_var(const ast::Identifier &name) const ;
+        int get_func(const ast::Identifier &name) const ;
+        int add_var(const ast::Identifier &name) ;
+        int add_func(const ast::Identifier &name) ;
+        
         //check expression
-        void check_expr(ast::Expression *, std::vector<VarM *> &, std::vector<FunM *> &) const;
-        void check_lval(ast::LValue *, std::vector<VarM *> &, std::vector<FunM *> &) const;
-        void check_unary(ast::UnaryExpr *, std::vector<VarM *> &, std::vector<FunM *> &) const;
-        void check_binary(ast::BinaryExpr *, std::vector<VarM *> &, std::vector<FunM *> &) const;
-        void check_call(ast::Call *, std::vector<VarM *> &, std::vector<FunM *> &) const;
+        void check_expr(ast::Expression *) const;
+        void check_lval(ast::LValue *) const;
+        void check_unary(ast::UnaryExpr *) const;
+        void check_binary(ast::BinaryExpr *) const;
+        void check_call(ast::Call *) const;
 
         ErrorReporter& err;
     };

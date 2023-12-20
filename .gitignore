@@ -3,3 +3,5 @@ src/parser
 *.o
 /runtime
 /.vscode
+antlr4-runtime
+.clangd
