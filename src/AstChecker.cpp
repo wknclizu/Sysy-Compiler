@@ -14,6 +14,11 @@ namespace frontend {
     AstChecker::AstChecker(ErrorReporter &err_reporter) : err(err_reporter) {}
     
     int AstChecker::add_var(const ast::Identifier &name) {
+        auto tname = ast::Identifier(name.name().substr(1), false);
+        if (m_func.count(tname)) {
+            err.error(ErrorType::IncorrectUseOfFuncName, tname.name());
+            return 0;
+        }
         if (m_var.back().count(name)) {
             err.error(ErrorType::VarDuplicated, name.name());
         }
@@ -25,10 +30,21 @@ namespace frontend {
                 return i->at(name);
             }
         }
+        auto tname = ast::Identifier(name.name().substr(1), false);
+        if (m_func.count(tname)) {
+            err.error(ErrorType::IncorrectUseOfFuncName, name.name());
+            return 0;
+        }
         err.error(ErrorType::VarUnknown, name.name());
         return 0;
     }
     int AstChecker::add_func(const ast::Identifier &name) {
+        for (auto i = m_var.rbegin(); i != m_var.rend(); ++i) {
+            if (i->count(ast::Identifier(name.name()))) {
+                err.error(ErrorType::CallVarAsFunc, name.name());
+                return 0;
+            }
+        }
         if (m_func.count(name)) {
             err.error(ErrorType::FuncDuplicated, name.name());
         }
@@ -36,6 +52,12 @@ namespace frontend {
     }
     int AstChecker::get_func(const ast::Identifier &name) const {
         if (!m_func.count(name)) {
+            for (auto i = m_var.rbegin(); i != m_var.rend(); ++i) {
+                if (i->count(ast::Identifier(name.name()))) {
+                    err.error(ErrorType::CallVarAsFunc, name.name());
+                    return 0;
+                }
+            }
             err.error(ErrorType::FuncUnknown, name.name());
             return 0;
         } else {

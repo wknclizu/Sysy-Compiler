@@ -7,10 +7,15 @@ int func(int p){
 	p = p - 1;
 	return p;
 }
+int func() {
+	return 1;
+}
 int main(){
 	int b;
 	int b;
 	a = 10;
-	b = fun(a);
+	b = a(a);
+	a = fun(c);
+	func = 10;
 	return b;
 }
