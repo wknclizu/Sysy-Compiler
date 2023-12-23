@@ -11,6 +11,11 @@ using std::ostream;
 
 using AstScalarType = frontend::ast::ScalarType;
 
+std::unique_ptr<llvm::LLVMContext> frontend::ast::TheContext;
+std::unique_ptr<llvm::IRBuilder<>> frontend::ast::Builder;
+std::unique_ptr<llvm::Module> frontend::ast::TheModule;
+std::map<std::string, llvm::Value *> frontend::ast::NamedValues;
+
 std::string_view op_string(UnaryOp op) {
     switch (op) {
         case UnaryOp::Add:

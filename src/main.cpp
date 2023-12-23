@@ -64,6 +64,8 @@ int main(int argc, const char* argv[]) {
     // print ast
     ast->print(std::cout,0);   //打印AST
 
+    // ast->CodeGen()->dump();
+    ast->CodeGen()->print(llvm::errs(), false);
     
     return 0;
 }
