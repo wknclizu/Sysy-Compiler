@@ -2,6 +2,7 @@
 #include "utils.h"
 
 #include <cassert>
+#include <llvm/IR/LLVMContext.h>
 #include <ostream>
 #include <string>
 #include <string_view>
@@ -11,9 +12,9 @@ using std::ostream;
 
 using AstScalarType = frontend::ast::ScalarType;
 
-std::unique_ptr<llvm::LLVMContext> frontend::ast::TheContext;
-std::unique_ptr<llvm::IRBuilder<>> frontend::ast::Builder;
-std::unique_ptr<llvm::Module> frontend::ast::TheModule;
+std::unique_ptr<llvm::LLVMContext> frontend::ast::TheContext = std::make_unique<llvm::LLVMContext>();
+std::unique_ptr<llvm::IRBuilder<>> frontend::ast::Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
+std::unique_ptr<llvm::Module> frontend::ast::TheModule = std::make_unique<llvm::Module>("testModule", *TheContext);
 std::map<std::string, llvm::Value *> frontend::ast::NamedValues;
 
 std::string_view op_string(UnaryOp op) {
@@ -289,6 +290,8 @@ void Return::print(std::ostream &out, unsigned int indent) const {
 }
 
 void Function::print(std::ostream &out, unsigned int indent) const {
+    // this->CodeGen()->print(llvm::errs(), false);
+
     print_indent(out, indent);
     out << "Function " << m_type << ' ' << m_ident;
     out << '(';
@@ -391,4 +394,151 @@ std::string Call::to_string() const {
     }
     s += ")";
     return s;
+}
+llvm::Value *BinaryExpr::CodeGen() {
+    llvm::Value *L = m_lhs->CodeGen();
+    llvm::Value *R = m_rhs->CodeGen();
+
+    if (!L || !R)
+        return nullptr;
+
+    
+    L->print(llvm::errs(), false);
+    R->print(llvm::errs(), false);
+    switch (m_op) {
+        case BinaryOp::Add:
+            std::cerr<< "ADD\n";
+            return Builder->CreateAdd(L, R);
+        case BinaryOp::Sub:
+            return Builder->CreateSub(L, R, "subtmp");
+        case BinaryOp::Mul:
+            return Builder->CreateMul(L, R, "multmp");
+        case BinaryOp::Div:
+            return Builder->CreateFDiv(L, R, "divtmp"); // TODO: 换成int的
+        case BinaryOp::Eq:
+            return Builder->CreateFCmpOEQ(L, R, "eqtmp");
+        default:
+            assert(false);
+    }
+}
+llvm::Value *IntLiteral::CodeGen() {
+    // std::cerr<<m_value<< '\n';
+    auto toret = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*TheContext), m_value);
+    return toret;
+    // auto toret = llvm::ConstantInt::get(*TheContext, llvm::APInt(int(m_value), true)); RE
+}
+llvm::Value *FloatLiteral::CodeGen() {
+    return nullptr;
+    return llvm::ConstantFP::get(*TheContext, llvm::APFloat(m_value));
+}
+llvm::Value *Function::CodeGen() {
+    // std::cerr<<  m_ident.name()<< std::endl;
+    llvm::Function* function = TheModule->getFunction(m_ident.name());
+    // llvm::Function* function = nullptr;
+    if (!function) {
+        // std::cerr<< "NEW FUNC\n";
+        std::vector<llvm::Type*> args(m_params.size(), llvm::Type::getDoubleTy(*TheContext));
+        llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(*TheContext), args, false);
+        function = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_ident.name(), TheModule.get());
+        unsigned Idx = 0;
+        for (auto& Arg : function->args()) {
+            Arg.setName(m_params[Idx++]->ident().name());
+        }
+    }
+    if (!function) 
+        return nullptr;
+
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*TheContext, "entry", function);    
+    Builder->SetInsertPoint(BB);
+
+    // Record the function arguments in the NamedValues map.
+    NamedValues.clear();
+    for (auto &Arg : function->args())
+        NamedValues[std::string(Arg.getName())] = &Arg;
+
+    if (llvm::Value *RetVal = m_body->CodeGen()) {
+        // Finish off the function.
+        Builder->CreateRet(RetVal);
+
+        // Validate the generated code, checking for consistency.
+        // verifyFunction(*function);
+
+        return function;
+    }
+
+    // Error reading body, remove function.
+    function->eraseFromParent();
+    return nullptr;
+}
+
+llvm::Value *CompileUnit::CodeGen() {
+    for (auto& child : m_children) {
+        if (child.index() == 0) {
+            auto &decl = std::get<std::unique_ptr<Declaration>>(child);
+            // return decl->CodeGen(); // TODO: 暂时只返回一个
+        } else {
+            auto &func = std::get<std::unique_ptr<Function>>(child);
+            func->CodeGen();
+        }
+    }
+    return nullptr;
+}
+llvm::Value *Block::CodeGen() {
+    for (auto& child : m_children) {
+        if (child.index() == 0) {
+            auto &decl = std::get<std::unique_ptr<Declaration>>(child);
+            // return decl->CodeGen();
+        } else {
+            auto &stat = std::get<std::unique_ptr<Statement>>(child);
+            stat->CodeGen();
+        }
+    }
+    return nullptr;
+}
+llvm::Value *ExprStmt::CodeGen() {
+    auto t = m_expr->CodeGen();
+    // if (t) {
+    //     t->print(llvm::errs(), false);
+    // }
+    return t;
+}
+
+llvm::Value *Assignment::CodeGen() {
+    return nullptr;
+}
+llvm::Value *IfElse::CodeGen() {
+    return nullptr;
+}
+llvm::Value *While::CodeGen() {
+    return nullptr;
+}
+llvm::Value *Break::CodeGen() {
+    return nullptr;
+}
+llvm::Value *Continue::CodeGen() {
+    return nullptr;
+}
+llvm::Value *Return::CodeGen() {
+    return nullptr;
+}
+llvm::Value *AstNode::CodeGen() {
+    return nullptr;
+}
+
+void test_function() {
+    
+    std::vector<llvm::Type*> args(0, llvm::Type::getDoubleTy(*TheContext));
+    llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(*TheContext), args, false);
+    auto function = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "myfunc", TheModule.get());
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*TheContext, "entry", function);    
+    Builder->SetInsertPoint(BB);
+    auto L = llvm::ConstantInt::get(*TheContext, llvm::APInt(1, true));
+    auto R = llvm::ConstantInt::get(*TheContext, llvm::APInt(2, true));
+    L->print(llvm::errs(), false);
+    std::cerr<< std::endl;
+    R->print(llvm::errs(), false);
+    std::cerr<< std::endl;
+    auto ret = Builder->CreateAdd(L, R);
+
+    ret->print(llvm::errs(), false);
 }

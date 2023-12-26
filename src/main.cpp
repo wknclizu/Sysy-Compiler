@@ -12,6 +12,7 @@
 #include "AstVisitor.h"
 #include "AstRewriter.h"
 #include "AstChecker.h"
+#include "ast.h"
 #include "errorReporter.h"
 
 using namespace std;
@@ -64,8 +65,10 @@ int main(int argc, const char* argv[]) {
     // print ast
     ast->print(std::cout,0);   //打印AST
 
+    ast->CodeGen();
+    // test_function();
     // ast->CodeGen()->dump();
-    ast->CodeGen()->print(llvm::errs(), false);
+    // ast->CodeGen()->print(llvm::errs(), false);
     
     return 0;
 }

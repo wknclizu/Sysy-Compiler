@@ -10,6 +10,7 @@
 
 #include "Display.h"
 #include "common.h"
+#include <iostream>
 
 namespace frontend {
     namespace ast {
@@ -113,7 +114,7 @@ namespace frontend {
         class AstNode : public Display {
         public:
             virtual ~AstNode() = default;
-            virtual llvm::Value *CodeGen() {return NULL; }
+            virtual llvm::Value *CodeGen(); // TODO: 将来设置成全虚函数
         };
 
         class NumberLiteral;
@@ -191,28 +192,8 @@ namespace frontend {
             BinaryOp op() const { return m_op; }
             const std::unique_ptr<Expression> &lhs() const { return m_lhs; }
             const std::unique_ptr<Expression> &rhs() const { return m_rhs; }
-            llvm::Value *CodeGen() override {
-                llvm::Value *L = m_lhs->CodeGen();
-                llvm::Value *R = m_rhs->CodeGen();
-
-                if (!L || !R)
-                    return nullptr;
-        
-                switch (m_op) {
-                    case BinaryOp::Add:
-                        return Builder->CreateFAdd(L, R, "addtmp");
-                    case BinaryOp::Sub:
-                        return Builder->CreateFSub(L, R, "subtmp");
-                    case BinaryOp::Mul:
-                        return Builder->CreateFMul(L, R, "multmp");
-                    case BinaryOp::Div:
-                        return Builder->CreateFDiv(L, R, "divtmp");
-                    case BinaryOp::Eq:
-                        return Builder->CreateFCmpOEQ(L, R, "eqtmp");
-                    default:
-                        assert(false);
-                }
-            }
+            llvm::Value *CodeGen() override;
+            
         private:
             BinaryOp m_op;
             std::unique_ptr<Expression> m_lhs, m_rhs;
@@ -240,9 +221,7 @@ namespace frontend {
 
             void print(std::ostream &out, unsigned indent) const override;
             std::string to_string() const override;
-            llvm::Value *CodeGen() override {
-                return llvm::ConstantInt::get(*TheContext, llvm::APInt(m_value, true));
-            }
+            llvm::Value *CodeGen() override;
         private:
             Value m_value;
         };
@@ -259,9 +238,7 @@ namespace frontend {
 
             void print(std::ostream &out, unsigned indent) const override;
             std::string to_string() const override;
-            llvm::Value *CodeGen() override {
-                return llvm::ConstantFP::get(*TheContext, llvm::APFloat(m_value));
-            }
+            llvm::Value *CodeGen() override;
 
         private:
             Value m_value;
@@ -318,6 +295,7 @@ namespace frontend {
 
             void print(std::ostream &out, unsigned indent) const override;
 
+            llvm::Value *CodeGen() override;
         private:
             std::unique_ptr<Expression> m_expr;
         };
@@ -333,6 +311,7 @@ namespace frontend {
 
             void print(std::ostream &out, unsigned indent) const override;
 
+            llvm::Value *CodeGen() override;
         private:
             std::unique_ptr<LValue> m_lhs;
             std::unique_ptr<Expression> m_rhs;
@@ -394,18 +373,7 @@ namespace frontend {
             const std::vector<Child> &children() const { return m_children; }
 
             void print(std::ostream &out, unsigned indent) const override;
-            llvm::Value *CodeGen() override {
-                for (auto& child : m_children) {
-                    if (child.index() == 0) {
-                        auto &decl = std::get<std::unique_ptr<Declaration>>(child);
-                        return decl->CodeGen();
-                    } else {
-                        auto &stat = std::get<std::unique_ptr<Statement>>(child);
-                        return stat->CodeGen();
-                    }
-                }
-            
-            }
+            llvm::Value *CodeGen() override;
 
         public:
             std::vector<Child> m_children;
@@ -425,6 +393,7 @@ namespace frontend {
 
             void print(std::ostream &out, unsigned indent) const override;
 
+            llvm::Value *CodeGen() override;
         public:
             std::unique_ptr<Expression> m_cond;
             std::unique_ptr<Statement> m_then, m_else;
@@ -441,6 +410,7 @@ namespace frontend {
 
             void print(std::ostream &out, unsigned indent) const override;
 
+            llvm::Value *CodeGen() override;
         private:
             std::unique_ptr<Expression> m_cond;
             std::unique_ptr<Statement> m_body;
@@ -450,6 +420,7 @@ namespace frontend {
         public:
             virtual ~Break() = default;
 
+            llvm::Value *CodeGen() override;
             void print(std::ostream &out, unsigned indent) const override;
         };
 
@@ -457,6 +428,7 @@ namespace frontend {
         public:
             virtual ~Continue() = default;
 
+            llvm::Value *CodeGen() override;
             void print(std::ostream &out, unsigned indent) const override;
         };
 
@@ -468,6 +440,7 @@ namespace frontend {
             const std::unique_ptr<Expression> &res() const { return m_res; }
 
             void print(std::ostream &out, unsigned indent) const override;
+            llvm::Value *CodeGen() override;
 
         private:
             std::unique_ptr<Expression> m_res;
@@ -500,44 +473,7 @@ namespace frontend {
             bool operator<(const Function &rhs) const {
                 return this->m_ident < rhs.m_ident;
             }
-            llvm::Value *CodeGen() override {
-                llvm::Function* function = TheModule->getFunction(m_ident.name());
-                if (!function) {
-                    std::vector<llvm::Type*> args(m_params.size(), llvm::Type::getDoubleTy(*TheContext));
-                    llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(*TheContext), args, false);
-                    function = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_ident.name(), TheModule.get());
-                    unsigned Idx = 0;
-                    for (auto& Arg : function->args()) {
-                        Arg.setName(m_params[Idx++]->ident().name());
-                    }
-                }
-                if (!function) 
-                    return nullptr;
-
-                llvm::BasicBlock *BB = llvm::BasicBlock::Create(*TheContext, "entry", function);    
-                Builder->SetInsertPoint(BB);
-
-                // Record the function arguments in the NamedValues map.
-                NamedValues.clear();
-                for (auto &Arg : function->args())
-                    NamedValues[std::string(Arg.getName())] = &Arg;
-
-                if (llvm::Value *RetVal = m_body->CodeGen()) {
-                    // Finish off the function.
-                    Builder->CreateRet(RetVal);
-
-                    // Validate the generated code, checking for consistency.
-                    // verifyFunction(*function);
-
-                    return function;
-                }
-
-                // Error reading body, remove function.
-                function->eraseFromParent();
-                return nullptr;
-                    
-                
-            }
+            llvm::Value *CodeGen() override;
 
         private:
             std::unique_ptr<ScalarType> m_type;
@@ -556,17 +492,7 @@ namespace frontend {
             virtual ~CompileUnit() = default;
 
             void print(std::ostream &out, unsigned indent) const override;
-            llvm::Value *CodeGen() override {
-                for (auto& child : m_children) {
-                    if (child.index() == 0) {
-                        auto &decl = std::get<std::unique_ptr<Declaration>>(child);
-                        return decl->CodeGen(); // TODO: 暂时只返回一个
-                    } else {
-                        auto &func = std::get<std::unique_ptr<Function>>(child);
-                        return func->CodeGen();
-                    }
-                }
-            }
+            llvm::Value *CodeGen() override;
             const std::vector<Child> &children() const { return m_children; }
 
         private:
@@ -575,3 +501,5 @@ namespace frontend {
 
     } // namespace ast
 } // namespace frontend
+
+void test_function();
