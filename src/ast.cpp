@@ -403,8 +403,8 @@ llvm::Value *BinaryExpr::CodeGen() {
         return nullptr;
 
     
-    L->print(llvm::errs(), false);
-    R->print(llvm::errs(), false);
+    // L->print(llvm::errs(), false);
+    // R->print(llvm::errs(), false);
     switch (m_op) {
         case BinaryOp::Add:
             std::cerr<< "ADD\n";
@@ -457,9 +457,9 @@ llvm::Value *Function::CodeGen() {
         NamedValues[std::string(Arg.getName())] = &Arg;
 
     if (llvm::Value *RetVal = m_body->CodeGen()) {
+        // RetVal->print(llvm::errs(), false);
         // Finish off the function.
         Builder->CreateRet(RetVal);
-
         // Validate the generated code, checking for consistency.
         // verifyFunction(*function);
 
@@ -478,7 +478,7 @@ llvm::Value *CompileUnit::CodeGen() {
             // return decl->CodeGen(); // TODO: 暂时只返回一个
         } else {
             auto &func = std::get<std::unique_ptr<Function>>(child);
-            func->CodeGen();
+            func->CodeGen(); // ->print(llvm::errs(), false);
         }
     }
     return nullptr;
@@ -487,7 +487,7 @@ llvm::Value *Block::CodeGen() {
     for (auto& child : m_children) {
         if (child.index() == 0) {
             auto &decl = std::get<std::unique_ptr<Declaration>>(child);
-            // return decl->CodeGen();
+            decl->CodeGen();
         } else {
             auto &stat = std::get<std::unique_ptr<Statement>>(child);
             stat->CodeGen();

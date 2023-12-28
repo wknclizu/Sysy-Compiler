@@ -66,6 +66,8 @@ int main(int argc, const char* argv[]) {
     ast->print(std::cout,0);   //打印AST
 
     ast->CodeGen();
+
+    ast::TheModule->print(llvm::errs(), nullptr);
     // test_function();
     // ast->CodeGen()->dump();
     // ast->CodeGen()->print(llvm::errs(), false);
