@@ -4,6 +4,7 @@
 #include <cassert>
 #include <llvm/IR/LLVMContext.h>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -484,15 +485,19 @@ llvm::Value *CompileUnit::CodeGen() {
     return nullptr;
 }
 llvm::Value *Block::CodeGen() {
+    map<std::string, ...> mp;
+    var.push_back(&mp);
     for (auto& child : m_children) {
-        if (child.index() == 0) {
-            auto &decl = std::get<std::unique_ptr<Declaration>>(child);
-            decl->CodeGen();
-        } else {
-            auto &stat = std::get<std::unique_ptr<Statement>>(child);
-            stat->CodeGen();
-        }
+        child->CodeGen();
+        // if (child.index() == 0) {
+        //     auto &decl = std::get<std::unique_ptr<Declaration>>(child);
+        //     decl->CodeGen();
+        // } else {
+        //     auto &stat = std::get<std::unique_ptr<Statement>>(child);
+        //     stat->CodeGen();
+        // }
     }
+    var.pop_back();
     return nullptr;
 }
 llvm::Value *ExprStmt::CodeGen() {
@@ -503,22 +508,84 @@ llvm::Value *ExprStmt::CodeGen() {
     return t;
 }
 
-llvm::Value *Assignment::CodeGen() {
+llvm::Value *Assignment::CodeGen() 
+{
+    llvm::Value *lhs = GetVarPointer(m_lhs);
+    llvm::Value *rhs = m_rhs->CodeGen();
+    // do not do type convert?
+    Builder.CreateStore(rhs, lhs);
+
     return nullptr;
 }
 llvm::Value *IfElse::CodeGen() {
+    llvm::Value *value = m_cond->CodeGen();
+
+    llvm::Function *function = Builder.GetInsertBlock()->getParent();
+    auto thenBB = llvm::BasicBlock::Create(TheContext, "then");
+    auto elseBB = llvm::BasicBlock::Create(TheContext, "else");
+    // what is merge
+    Builder.CreateCondBr(value, thenBB, elseBB);
+
+    bool need_merge = false;
+    function->GetBasicBlockList().push_back(thenBB);
+    Builder.SetInsertPoint(thenBB);
+    m_then->CodeGen();
+    if (Builder.GetInsertBlock()) {
+        need_merge = true;
+        Builder.CreateBr(mergeBB);
+    }
+
+    function->GetBasicBlockList().push_back(elseBB);
+    Builder.SetInsertPoint(elseBB);
+    if (m_else) {
+        m_else->CodeGen();
+    }
+    if (Builder.GetInsertBlock()) {
+        need_merge = true;
+        Builder.CreateBr(mergeBB);
+    }
+
+    if (need_merge) {
+        ...
+    }
+
     return nullptr;
 }
 llvm::Value *While::CodeGen() {
     return nullptr;
 }
 llvm::Value *Break::CodeGen() {
+    if (loops.empty()) {
+        throw std::runtime_error("break statement outside of loop");
+    }
+    if (!Builder.GetInsertBlock()) {
+        return nullptr;
+    }
+    Builder.CreateBr(loops.top().breakBB);
+    Builder.ClearInsertionPoint();
     return nullptr;
 }
 llvm::Value *Continue::CodeGen() {
+    if (loops.empty()) {
+        throw std::runtime_error("continue statement outside of loop");
+    }
+    if (!Builder.GetInsertBlock()) {
+        return nullptr;
+    }
+    Builder.CreateBr(loops.top().continueBB);
+    Builder.ClearInsertionPoint();
     return nullptr;
 }
 llvm::Value *Return::CodeGen() {
+    if (Builder.GetInsertBlock()) {
+        return nullptr;
+    }
+
+    if (m_res) {
+        Builder.CreateRet(m_res->CodeGen()); // ??
+    } else {
+        Builder.CreateRetVoid();
+    }
     return nullptr;
 }
 llvm::Value *AstNode::CodeGen() {
