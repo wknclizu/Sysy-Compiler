@@ -154,6 +154,7 @@ namespace frontend {
                 return m_indices;
             }
 
+            llvm::Value *CodeGen() override;
         public:
             mutable std::shared_ptr<Var> var;
 

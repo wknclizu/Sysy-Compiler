@@ -412,25 +412,41 @@ std::string Call::to_string() const {
 llvm::Value *BinaryExpr::CodeGen() {
     llvm::Value *L = m_lhs->CodeGen();
     llvm::Value *R = m_rhs->CodeGen();
-
-    if (!L || !R)
+    // 光靠这里改一定不行，比如fun(a)作为参数，或者只有a
+    if (auto var = dynamic_cast<LValue *>(m_rhs.get())) {
+        std::cerr<<"trans R \n";
+        R = Builder->CreateLoad(llvm::Type::getInt32Ty(*ast::TheContext), R);
+        // R = Builder->CreateLoad(R->getType()->getPointerElementType(), R);
+    } 
+    if (auto var = dynamic_cast<LValue *>(m_lhs.get())) {
+        std::cerr<<"trans L \n";
+        L = Builder->CreateLoad(llvm::Type::getInt32Ty(*ast::TheContext), L);
+        // R = Builder->CreateLoad(R->getType()->getPointerElementType(), R);
+    } 
+    L->print(llvm::errs(), false); std::cerr<< '\n';
+    std::cerr<<"421\n";
+    R->print(llvm::errs(), false); std::cerr<< '\n';
+    if (!L || !R) {
+        throw std::runtime_error{"binary expr, one of it us nullptr"};
+        
         return nullptr;
+    }
 
     
-    // L->print(llvm::errs(), false);
-    // R->print(llvm::errs(), false);
     switch (m_op) {
         case BinaryOp::Add:
             std::cerr<< "ADD\n";
-            return Builder->CreateAdd(L, R);
+            return Builder->CreateAdd(L, R, "addtmp");
         case BinaryOp::Sub:
             return Builder->CreateSub(L, R, "subtmp");
         case BinaryOp::Mul:
             return Builder->CreateMul(L, R, "multmp");
-        case BinaryOp::Div:
-            return Builder->CreateFDiv(L, R, "divtmp"); // TODO: 换成int的
-        case BinaryOp::Eq:
-            return Builder->CreateFCmpOEQ(L, R, "eqtmp");
+        case BinaryOp::Lt:
+            return Builder->CreateICmpSLT(L, R, "ltcmp");
+        // case BinaryOp::Div:
+        //     return Builder->CreateFDiv(L, R, "divtmp"); // TODO: 换成int的
+        // case BinaryOp::Eq:
+        //     return Builder->CreateFCmpOEQ(L, R, "eqtmp");
         default:
             assert(false);
     }
@@ -611,6 +627,8 @@ llvm::Value *Call::CodeGen() {
 llvm::Value *Assignment::CodeGen() {
     llvm::Value *lhs = symbolTable.get(m_lhs->ident().name());
     llvm::Value *rhs = m_rhs->CodeGen();
+    // lhs->print(llvm::errs()); std::cerr<< '\n';
+    // rhs->print(llvm::errs()); std::cerr<< '\n';
     // do not do type convert?
     Builder->CreateStore(rhs, lhs);
 
@@ -651,8 +669,8 @@ llvm::Value *IfElse::CodeGen() {
         Builder.SetInsertPoint(mergeBB);
     }
 
-    return nullptr;
     */
+    return nullptr;
 }
 llvm::Value *While::CodeGen() {
     // /*
@@ -704,8 +722,8 @@ llvm::Value *Break::CodeGen() {
     }
     Builder.CreateBr(loops.top().breakBB);
     Builder.ClearInsertionPoint();
-    return nullptr;
     */
+    return nullptr;
 }
 llvm::Value *Continue::CodeGen() {
     /*
@@ -717,8 +735,8 @@ llvm::Value *Continue::CodeGen() {
     }
     Builder.CreateBr(loops.top().continueBB);
     Builder.ClearInsertionPoint();
-    return nullptr;
     */
+    return nullptr;
 }
 llvm::Value *Return::CodeGen() {
     std::cerr<< "return codegen\n";
@@ -736,7 +754,12 @@ llvm::Value *Return::CodeGen() {
     return nullptr;
 }
 llvm::Value *AstNode::CodeGen() {
+    throw std::runtime_error{"codegen not declared"};
     return nullptr;
+}
+llvm::Value *LValue::CodeGen() {
+    std::cerr<< "indices size: "<< indices().size()<< '\n';
+    return symbolTable.get(ident().name());
 }
 
 void test_function() {
