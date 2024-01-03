@@ -5,6 +5,6 @@ int func() {
 int main() {
 int a;
   a = 3;
-  func();
+  a = func();
   return 1;
 }

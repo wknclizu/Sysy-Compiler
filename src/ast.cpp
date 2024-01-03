@@ -592,11 +592,20 @@ llvm::Value *Call::CodeGen() {
         throw std::runtime_error("invalid number of params for function " + m_func.name());
     }
     std::vector<llvm::Value *> values;
-    for (auto arg : m_args) {
-        values.emplace_back(arg->CodeGen());
+    for (auto& child : m_args) {
+        llvm::Value* val;
+        if (child.index() == 0) {
+            auto &expr = std::get<std::unique_ptr<Expression>>(child);
+            val = expr->CodeGen();
+        } else {
+            throw std::runtime_error{"string literal"};
+            // auto &stat = std::get<std::unique_ptr<StringLiteral>>(child);
+            // stat->CodeGen();
+        }
+        values.emplace_back(val);
     }
 
-    return Builder.CreateCall(function, values);
+    return Builder->CreateCall(function, values);
 }
 
 llvm::Value *Assignment::CodeGen() {

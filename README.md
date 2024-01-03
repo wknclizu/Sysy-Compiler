@@ -61,3 +61,10 @@ clean:
     
 
 ```
+
+## compile
+
+clang从c编译到llvm代码的命令: `clang -S -emit-llvm temp.c`
+
+从llvm编译到目标代码的命令：`llc temp.ll`
+
