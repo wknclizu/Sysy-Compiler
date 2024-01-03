@@ -412,17 +412,6 @@ std::string Call::to_string() const {
 llvm::Value *BinaryExpr::CodeGen() {
     llvm::Value *L = m_lhs->CodeGen();
     llvm::Value *R = m_rhs->CodeGen();
-    // 光靠这里改一定不行，比如fun(a)作为参数，或者只有a
-    if (auto var = dynamic_cast<LValue *>(m_rhs.get())) {
-        std::cerr<<"trans R \n";
-        R = Builder->CreateLoad(llvm::Type::getInt32Ty(*ast::TheContext), R);
-        // R = Builder->CreateLoad(R->getType()->getPointerElementType(), R);
-    } 
-    if (auto var = dynamic_cast<LValue *>(m_lhs.get())) {
-        std::cerr<<"trans L \n";
-        L = Builder->CreateLoad(llvm::Type::getInt32Ty(*ast::TheContext), L);
-        // R = Builder->CreateLoad(R->getType()->getPointerElementType(), R);
-    } 
     L->print(llvm::errs(), false); std::cerr<< '\n';
     std::cerr<<"421\n";
     R->print(llvm::errs(), false); std::cerr<< '\n';
@@ -431,6 +420,8 @@ llvm::Value *BinaryExpr::CodeGen() {
         
         return nullptr;
     }
+    std::cerr<< L->getType()->getTypeID()<< '\n';
+    std::cerr<< R->getType()->getTypeID()<< '\n';
 
     
     switch (m_op) {
@@ -690,10 +681,10 @@ llvm::Value *While::CodeGen() {
     llvm::Value *value = m_cond->CodeGen();
 
     // type convert: int -> bool
-    value = Builder->CreateICmpNE(
-        value, 
-        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*TheContext), 0)
-    );
+    // value = Builder->CreateICmpNE(
+    //     value, 
+    //     llvm::ConstantInt::get(llvm::Type::getInt32Ty(*TheContext), 0)
+    // );
     Builder->CreateCondBr(value, bodyBB, continueBB);
 
     // function->getBasicBlockList().push_back(bodyBB);
@@ -759,7 +750,11 @@ llvm::Value *AstNode::CodeGen() {
 }
 llvm::Value *LValue::CodeGen() {
     std::cerr<< "indices size: "<< indices().size()<< '\n';
-    return symbolTable.get(ident().name());
+    std::cerr<<"L trans R \n";
+    auto t = symbolTable.get(ident().name());
+    t = Builder->CreateLoad(llvm::Type::getInt32Ty(*ast::TheContext), t);
+    // R = Builder->CreateLoad(R->getType()->getPointerElementType(), R);
+    return t;
 }
 
 void test_function() {
