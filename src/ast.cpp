@@ -1,5 +1,6 @@
 #include "ast.h"
 #include "utils.h"
+#include "SymbolTable.h"
 
 #include <cassert>
 #include <llvm/IR/LLVMContext.h>
@@ -17,6 +18,8 @@ std::unique_ptr<llvm::LLVMContext> frontend::ast::TheContext = std::make_unique<
 std::unique_ptr<llvm::IRBuilder<>> frontend::ast::Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
 std::unique_ptr<llvm::Module> frontend::ast::TheModule = std::make_unique<llvm::Module>("testModule", *TheContext);
 std::map<std::string, llvm::Value *> frontend::ast::NamedValues;
+SymbolTable<llvm::Value*> var; // 默认全局变量，只管理变量不管理函数
+llvm::Function *nowFunction;
 
 std::string_view op_string(UnaryOp op) {
     switch (op) {
@@ -476,7 +479,7 @@ llvm::Value *CompileUnit::CodeGen() {
     for (auto& child : m_children) {
         if (child.index() == 0) {
             auto &decl = std::get<std::unique_ptr<Declaration>>(child);
-            // return decl->CodeGen(); // TODO: 暂时只返回一个
+            decl->CodeGen();
         } else {
             auto &func = std::get<std::unique_ptr<Function>>(child);
             func->CodeGen(); // ->print(llvm::errs(), false);
@@ -484,7 +487,10 @@ llvm::Value *CompileUnit::CodeGen() {
     }
     return nullptr;
 }
+llvm::Value *Declaration::CodeGen() {
+}
 llvm::Value *Block::CodeGen() {
+    /*
     map<std::string, ...> mp;
     var.push_back(&mp);
     for (auto& child : m_children) {
@@ -499,6 +505,7 @@ llvm::Value *Block::CodeGen() {
     }
     var.pop_back();
     return nullptr;
+    */
 }
 llvm::Value *ExprStmt::CodeGen() {
     auto t = m_expr->CodeGen();
@@ -508,16 +515,18 @@ llvm::Value *ExprStmt::CodeGen() {
     return t;
 }
 
-llvm::Value *Assignment::CodeGen() 
-{
+llvm::Value *Assignment::CodeGen() {
+    /*
     llvm::Value *lhs = GetVarPointer(m_lhs);
     llvm::Value *rhs = m_rhs->CodeGen();
     // do not do type convert?
     Builder.CreateStore(rhs, lhs);
 
     return nullptr;
+    */
 }
 llvm::Value *IfElse::CodeGen() {
+    /*
     llvm::Value *value = m_cond->CodeGen();
 
     llvm::Function *function = Builder.GetInsertBlock()->getParent();
@@ -550,11 +559,13 @@ llvm::Value *IfElse::CodeGen() {
     }
 
     return nullptr;
+    */
 }
 llvm::Value *While::CodeGen() {
     return nullptr;
 }
 llvm::Value *Break::CodeGen() {
+    /*
     if (loops.empty()) {
         throw std::runtime_error("break statement outside of loop");
     }
@@ -564,8 +575,10 @@ llvm::Value *Break::CodeGen() {
     Builder.CreateBr(loops.top().breakBB);
     Builder.ClearInsertionPoint();
     return nullptr;
+    */
 }
 llvm::Value *Continue::CodeGen() {
+    /*
     if (loops.empty()) {
         throw std::runtime_error("continue statement outside of loop");
     }
@@ -575,8 +588,10 @@ llvm::Value *Continue::CodeGen() {
     Builder.CreateBr(loops.top().continueBB);
     Builder.ClearInsertionPoint();
     return nullptr;
+    */
 }
 llvm::Value *Return::CodeGen() {
+    /*
     if (Builder.GetInsertBlock()) {
         return nullptr;
     }
@@ -587,6 +602,7 @@ llvm::Value *Return::CodeGen() {
         Builder.CreateRetVoid();
     }
     return nullptr;
+    */
 }
 llvm::Value *AstNode::CodeGen() {
     return nullptr;
@@ -599,13 +615,15 @@ void test_function() {
     auto function = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "myfunc", TheModule.get());
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*TheContext, "entry", function);    
     Builder->SetInsertPoint(BB);
-    auto L = llvm::ConstantInt::get(*TheContext, llvm::APInt(1, true));
-    auto R = llvm::ConstantInt::get(*TheContext, llvm::APInt(2, true));
+    auto L = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*TheContext), 100);
+    auto R  = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*TheContext), 10);
     L->print(llvm::errs(), false);
     std::cerr<< std::endl;
     R->print(llvm::errs(), false);
     std::cerr<< std::endl;
     auto ret = Builder->CreateAdd(L, R);
 
-    ret->print(llvm::errs(), false);
+    Builder->CreateRet(ret);
+    // ret->print(llvm::errs(), false);
+    TheModule->print(llvm::errs(), nullptr);
 }

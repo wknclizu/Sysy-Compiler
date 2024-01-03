@@ -351,6 +351,7 @@ namespace frontend {
             const std::unique_ptr<Initializer> &init() const { return m_init; }
             bool const_qualified() const { return m_const_qualified; }
 
+            llvm::Value *CodeGen() override;
         public:
             mutable std::shared_ptr<Var> var;
 
