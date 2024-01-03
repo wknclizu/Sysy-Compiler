@@ -475,6 +475,8 @@ llvm::Value *Function::CodeGen() {
     for (auto &Arg : function->args())
         NamedValues[std::string(Arg.getName())] = &Arg;
 
+    m_body->CodeGen();
+    /* 此处因为在tutorial3中，每个函数block必须返回，因此如果失败则删除该函数
     if (llvm::Value *RetVal = m_body->CodeGen()) {
         // RetVal->print(llvm::errs(), false);
         // Finish off the function.
@@ -482,12 +484,14 @@ llvm::Value *Function::CodeGen() {
         // Validate the generated code, checking for consistency.
         // verifyFunction(*function);
 
+        std::cerr<< "485\n";
         return function;
     }
+    */
 
     // Error reading body, remove function.
-    function->eraseFromParent();
-    return nullptr;
+    // function->eraseFromParent();
+    return function;
 }
 
 llvm::Value *CompileUnit::CodeGen() {
@@ -705,10 +709,7 @@ llvm::Value *Return::CodeGen() {
     }
 
     if (m_res) {
-        std::cerr<< "2\n";
-        auto t = m_res->CodeGen();
-        assert(t);
-        Builder->CreateRet(t); // ??
+        Builder->CreateRet(m_res->CodeGen()); // ??
     } else {
         Builder->CreateRetVoid();
     }
