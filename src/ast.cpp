@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "utils.h"
 #include "SymbolTable.h"
+#include "type.h"
 
 #include <cassert>
 #include <llvm/IR/LLVMContext.h>
@@ -26,7 +27,7 @@ std::unique_ptr<llvm::LLVMContext> frontend::ast::TheContext = std::make_unique<
 std::unique_ptr<llvm::IRBuilder<>> frontend::ast::Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
 std::unique_ptr<llvm::Module> frontend::ast::TheModule = std::make_unique<llvm::Module>("testModule", *TheContext);
 std::map<std::string, llvm::Value *> frontend::ast::NamedValues;
-SymbolTable<llvm::Value*> var; // 默认全局变量，只管理变量不管理函数
+SymbolTable<llvm::Value*> symbolTable; // 默认全局变量，只管理变量不管理函数
 llvm::Function *nowFunction;
 std::stack<LoopInfo> loops;
 
@@ -450,8 +451,9 @@ llvm::Value *Function::CodeGen() {
     // llvm::Function* function = nullptr;
     if (!function) {
         // std::cerr<< "NEW FUNC\n";
-        std::vector<llvm::Type*> args(m_params.size(), llvm::Type::getDoubleTy(*TheContext));
-        llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(*TheContext), args, false);
+        // 暂时所有参数类型都是返回值类型
+        std::vector<llvm::Type*> args(m_params.size(), TypeSystem::get(type().get()));
+        llvm::FunctionType *FT = llvm::FunctionType::get(TypeSystem::get(type().get()), args, false);
         function = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_ident.name(), TheModule.get());
         unsigned Idx = 0;
         for (auto& Arg : function->args()) {
@@ -460,9 +462,13 @@ llvm::Value *Function::CodeGen() {
     }
     if (!function) 
         return nullptr;
+    nowFunction = function;
 
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*TheContext, "entry", function);    
     Builder->SetInsertPoint(BB);
+    if (Builder->GetInsertBlock()) {
+        std::cerr<< "GetInsertBlock ok\n";
+    }
 
     // Record the function arguments in the NamedValues map.
     NamedValues.clear();
@@ -497,24 +503,71 @@ llvm::Value *CompileUnit::CodeGen() {
     return nullptr;
 }
 llvm::Value *Declaration::CodeGen() {
+    if (nowFunction) {
+        // 在函数头部使用alloca分配空间
+        llvm::IRBuilder<> entryBuilder(
+                &nowFunction->getEntryBlock(),
+                nowFunction->getEntryBlock().begin()
+        );
+
+        // 生成局部变量
+        llvm::AllocaInst *alloca = entryBuilder.CreateAlloca(
+                TypeSystem::get(dynamic_cast<ScalarType*>(type().get())),
+                nullptr,
+                m_ident.name()
+        );
+
+        // 将局部变量插入符号表
+        symbolTable.insert(ident().name(), alloca);
+
+        // 初始化  在helper类，先不初始化
+        // if (def->initVal) {
+        //     dynamicInitValCodeGen(alloca, def->initVal);
+        // } 
+    } else {
+        // 全局变量
+        auto var = new llvm::GlobalVariable(
+                *TheModule,
+                TypeSystem::get(dynamic_cast<ScalarType*>(type().get())),
+                false,
+                llvm::GlobalValue::LinkageTypes::InternalLinkage,
+                nullptr,
+                m_ident.name()
+        );
+
+        // 将全局变量插入符号表
+        symbolTable.insert(m_ident.name(), var);
+
+        // 初始化
+        // if (def->initVal) {
+        //     llvm::Constant *initVal = constantInitValConvert(
+        //             def->initVal,
+        //             TypeSystem::get(type, convertArraySize(def->size))
+        //     );
+        //     var->setInitializer(initVal);
+        // } else {
+            // 未初始化的全局变量默认初始化为0
+            var->setInitializer(llvm::Constant::getNullValue(
+                    TypeSystem::get(dynamic_cast<ScalarType*>(type().get()))
+            ));
+        // }        
+    }
+    return nullptr;
 }
 llvm::Value *Block::CodeGen() {
-    /*
-    map<std::string, ...> mp;
-    var.push_back(&mp);
+    symbolTable.push();
     for (auto& child : m_children) {
-        child->CodeGen();
-        // if (child.index() == 0) {
-        //     auto &decl = std::get<std::unique_ptr<Declaration>>(child);
-        //     decl->CodeGen();
-        // } else {
-        //     auto &stat = std::get<std::unique_ptr<Statement>>(child);
-        //     stat->CodeGen();
-        // }
+        if (child.index() == 0) {
+            auto &decl = std::get<std::unique_ptr<Declaration>>(child);
+            decl->CodeGen();
+        } else {
+            auto &stat = std::get<std::unique_ptr<Statement>>(child);
+            stat->CodeGen();
+        }
     }
-    var.pop_back();
+    symbolTable.pop();
+    
     return nullptr;
-    */
 }
 llvm::Value *ExprStmt::CodeGen() {
     auto t = m_expr->CodeGen();
@@ -579,41 +632,44 @@ llvm::Value *IfElse::CodeGen() {
     */
 }
 llvm::Value *While::CodeGen() {
-    if (!Builder.GetInsertBlock()) {
+    // /*
+    if (!Builder->GetInsertBlock()) {
         return nullptr;
     }
-    llvm::Function *function = Builder.GetInsertBlock()->getParent();
-    llvm::BasicBlock *conditionBB = llvm::BasicBlock::Create(TheContext, "cond");
-    llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(TheContext, "body");
-    llvm::BasicBlock *continueBB = llvm::BasicBlock::Create(TheContext, "cont");
+    llvm::Function *function = Builder->GetInsertBlock()->getParent();
+    llvm::BasicBlock *conditionBB = llvm::BasicBlock::Create(*TheContext, "cond", function);
+    llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(*TheContext, "body", function);
+    llvm::BasicBlock *continueBB = llvm::BasicBlock::Create(*TheContext, "cont", function);
 
-    Builder.CreateBr(conditionBB);
-    function->getBasicBlockList().push_back(conditionBB);
-    Builder.SetInsertPoint(conditionBB);
+    Builder->CreateBr(conditionBB);
+    // function->insert(function->end(), conditionBB); // solve below bug
+    // function->getBasicBlockList().push_back(conditionBB); BUG!
+    Builder->SetInsertPoint(conditionBB);
 
     llvm::Value *value = m_cond->CodeGen();
 
     // type convert: int -> bool
-    value = Builder.CreateICmpNE(
+    value = Builder->CreateICmpNE(
         value, 
-        llvm::ConstantInt::get(llvm::Type::getInt32Ty(TheContext), 0)
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*TheContext), 0)
     );
-    Builder.CreateCondBr(value, bodyBB, continueBB);
+    Builder->CreateCondBr(value, bodyBB, continueBB);
 
-    function->getBasicBlockList().push_back(bodyBB);
-    Builder.SetInsertPoint(bodyBB);
+    // function->getBasicBlockList().push_back(bodyBB);
+    Builder->SetInsertPoint(bodyBB);
 
     loops.push({conditionBB, continueBB});
     m_body->CodeGen();
     loops.pop();
 
-    if (Builder.GetInsertBlock()) {
-        Builder.CreateBr(conditionBB);
+    if (Builder->GetInsertBlock()) {
+        Builder->CreateBr(conditionBB);
     }
-    function->getBasicBlockList().push_back(continueBB);
-    Builder.SetInsertPoint(continueBB);
+    // function->getBasicBlockList().push_back(continueBB);
+    Builder->SetInsertPoint(continueBB);
 
     return nullptr;
+    // */
 }
 llvm::Value *Break::CodeGen() {
     /*
@@ -642,19 +698,22 @@ llvm::Value *Continue::CodeGen() {
     */
 }
 llvm::Value *Return::CodeGen() {
-    /*
-    if (Builder.GetInsertBlock()) {
+    std::cerr<< "return codegen\n";
+    
+    if (!Builder->GetInsertBlock()) {
         return nullptr;
     }
 
     if (m_res) {
-        Builder.CreateRet(m_res->CodeGen()); // ??
+        std::cerr<< "2\n";
+        auto t = m_res->CodeGen();
+        assert(t);
+        Builder->CreateRet(t); // ??
     } else {
-        Builder.CreateRetVoid();
+        Builder->CreateRetVoid();
     }
-    Builder.ClearInsertionPoint();
+    Builder->ClearInsertionPoint();
     return nullptr;
-    */
 }
 llvm::Value *AstNode::CodeGen() {
     return nullptr;

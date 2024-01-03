@@ -67,8 +67,8 @@ int main(int argc, const char* argv[]) {
 
     ast->CodeGen();
 
-    // ast::TheModule->print(llvm::errs(), nullptr);
-    test_function();
+    ast::TheModule->print(llvm::errs(), nullptr);
+    // test_function();
     // ast->CodeGen()->dump();
     // ast->CodeGen()->print(llvm::errs(), false);
     
