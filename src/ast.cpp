@@ -7,12 +7,20 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <stack>
 #include <string_view>
+#include <utility>
 
 using namespace frontend::ast;
 using std::ostream;
 
 using AstScalarType = frontend::ast::ScalarType;
+
+// 用于记录循环信息，在continue/break时知道应该跳转到哪里
+struct LoopInfo{
+    llvm::BasicBlock *continueBB;
+    llvm::BasicBlock *breakBB;
+};
 
 std::unique_ptr<llvm::LLVMContext> frontend::ast::TheContext = std::make_unique<llvm::LLVMContext>();
 std::unique_ptr<llvm::IRBuilder<>> frontend::ast::Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
@@ -20,6 +28,7 @@ std::unique_ptr<llvm::Module> frontend::ast::TheModule = std::make_unique<llvm::
 std::map<std::string, llvm::Value *> frontend::ast::NamedValues;
 SymbolTable<llvm::Value*> var; // 默认全局变量，只管理变量不管理函数
 llvm::Function *nowFunction;
+std::stack<LoopInfo> loops;
 
 std::string_view op_string(UnaryOp op) {
     switch (op) {
@@ -515,7 +524,13 @@ llvm::Value *ExprStmt::CodeGen() {
     return t;
 }
 
-llvm::Value *Assignment::CodeGen() {
+
+llvm::Value *Call::CodeGen() {
+    return nullptr;
+}
+
+llvm::Value *Assignment::CodeGen() 
+{
     /*
     llvm::Value *lhs = GetVarPointer(m_lhs);
     llvm::Value *rhs = m_rhs->CodeGen();
@@ -532,6 +547,7 @@ llvm::Value *IfElse::CodeGen() {
     llvm::Function *function = Builder.GetInsertBlock()->getParent();
     auto thenBB = llvm::BasicBlock::Create(TheContext, "then");
     auto elseBB = llvm::BasicBlock::Create(TheContext, "else");
+    auto mergeBB = llvm::BasicBlock::Create(TheContext, "merge");
     // what is merge
     Builder.CreateCondBr(value, thenBB, elseBB);
 
@@ -555,13 +571,48 @@ llvm::Value *IfElse::CodeGen() {
     }
 
     if (need_merge) {
-        ...
+        function->getBasicBlockList().push_back(elseBB);
+        Builder.SetInsertPoint(mergeBB);
     }
 
     return nullptr;
     */
 }
 llvm::Value *While::CodeGen() {
+    if (!Builder.GetInsertBlock()) {
+        return nullptr;
+    }
+    llvm::Function *function = Builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock *conditionBB = llvm::BasicBlock::Create(TheContext, "cond");
+    llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(TheContext, "body");
+    llvm::BasicBlock *continueBB = llvm::BasicBlock::Create(TheContext, "cont");
+
+    Builder.CreateBr(conditionBB);
+    function->getBasicBlockList().push_back(conditionBB);
+    Builder.SetInsertPoint(conditionBB);
+
+    llvm::Value *value = m_cond->CodeGen();
+
+    // type convert: int -> bool
+    value = Builder.CreateICmpNE(
+        value, 
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(TheContext), 0)
+    );
+    Builder.CreateCondBr(value, bodyBB, continueBB);
+
+    function->getBasicBlockList().push_back(bodyBB);
+    Builder.SetInsertPoint(bodyBB);
+
+    loops.push({conditionBB, continueBB});
+    m_body->CodeGen();
+    loops.pop();
+
+    if (Builder.GetInsertBlock()) {
+        Builder.CreateBr(conditionBB);
+    }
+    function->getBasicBlockList().push_back(continueBB);
+    Builder.SetInsertPoint(continueBB);
+
     return nullptr;
 }
 llvm::Value *Break::CodeGen() {
@@ -601,6 +652,7 @@ llvm::Value *Return::CodeGen() {
     } else {
         Builder.CreateRetVoid();
     }
+    Builder.ClearInsertionPoint();
     return nullptr;
     */
 }

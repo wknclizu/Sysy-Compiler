@@ -273,6 +273,7 @@ namespace frontend {
 
             void print(std::ostream &out, unsigned indent) const override;
             std::string to_string() const override;
+            llvm::Value *CodeGen() override;
 
         private:
             Identifier m_func;
