@@ -524,7 +524,7 @@ llvm::Value *Declaration::CodeGen() {
         // 将局部变量插入符号表
         symbolTable.insert(ident().name(), alloca);
 
-        // 初始化  在helper类，先不初始化
+        // 初始化  在helper类，先初始化为0
         // if (def->initVal) {
         //     dynamicInitValCodeGen(alloca, def->initVal);
         // } 
@@ -599,16 +599,13 @@ llvm::Value *Call::CodeGen() {
     return Builder.CreateCall(function, values);
 }
 
-llvm::Value *Assignment::CodeGen() 
-{
-    /*
-    llvm::Value *lhs = GetVarPointer(m_lhs);
+llvm::Value *Assignment::CodeGen() {
+    llvm::Value *lhs = symbolTable.get(m_lhs->ident().name());
     llvm::Value *rhs = m_rhs->CodeGen();
     // do not do type convert?
-    Builder.CreateStore(rhs, lhs);
+    Builder->CreateStore(rhs, lhs);
 
     return nullptr;
-    */
 }
 llvm::Value *IfElse::CodeGen() {
     /*

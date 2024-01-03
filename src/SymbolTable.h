@@ -18,8 +18,8 @@ struct SymbolTable {
   }
   T get(const std::string& name) {
     for (auto it = rbegin(mp); it != rend(mp); ++it) {
-      if (mp.count(name)) {
-        return mp[name];
+      if (it->count(name)) {
+        return (*it)[name];
       }
     }
     throw std::runtime_error{"var: " + name + " don't exist"};
