@@ -8,7 +8,10 @@ template<class T>
 struct SymbolTable {
   std::vector<std::map<std::string, T>> mp; 
   SymbolTable(): mp(1) {}
-  void push() {std::cerr<< "symboltable pushed\n"; mp.emplace_back();}
+  void push() {
+    // std::cerr<< "symboltable pushed\n";
+    mp.emplace_back();
+  }
   void pop() {mp.pop_back();}
   void insert(const std::string &name, T v) {
     if (mp.back().count(name)) {

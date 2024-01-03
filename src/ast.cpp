@@ -412,21 +412,21 @@ std::string Call::to_string() const {
 llvm::Value *BinaryExpr::CodeGen() {
     llvm::Value *L = m_lhs->CodeGen();
     llvm::Value *R = m_rhs->CodeGen();
-    L->print(llvm::errs(), false); std::cerr<< '\n';
-    std::cerr<<"421\n";
-    R->print(llvm::errs(), false); std::cerr<< '\n';
+    // L->print(llvm::errs(), false); std::cerr<< '\n';
+    // std::cerr<<"421\n";
+    // R->print(llvm::errs(), false); std::cerr<< '\n';
     if (!L || !R) {
         throw std::runtime_error{"binary expr, one of it us nullptr"};
         
         return nullptr;
     }
-    std::cerr<< L->getType()->getTypeID()<< '\n';
-    std::cerr<< R->getType()->getTypeID()<< '\n';
+    // std::cerr<< L->getType()->getTypeID()<< '\n';
+    // std::cerr<< R->getType()->getTypeID()<< '\n';
 
     
     switch (m_op) {
         case BinaryOp::Add:
-            std::cerr<< "ADD\n";
+            // std::cerr<< "ADD\n";
             return Builder->CreateAdd(L, R, "addtmp");
         case BinaryOp::Sub:
             return Builder->CreateSub(L, R, "subtmp");
@@ -474,7 +474,7 @@ llvm::Value *Function::CodeGen() {
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*TheContext, "entry", function);    
     Builder->SetInsertPoint(BB);
     if (Builder->GetInsertBlock()) {
-        std::cerr<< "GetInsertBlock ok\n";
+        // std::cerr<< "GetInsertBlock ok\n";
     }
 
     // Record the function arguments in the NamedValues map.
@@ -626,41 +626,41 @@ llvm::Value *Assignment::CodeGen() {
     return nullptr;
 }
 llvm::Value *IfElse::CodeGen() {
-    /*
     llvm::Value *value = m_cond->CodeGen();
 
-    llvm::Function *function = Builder.GetInsertBlock()->getParent();
-    auto thenBB = llvm::BasicBlock::Create(TheContext, "then");
-    auto elseBB = llvm::BasicBlock::Create(TheContext, "else");
-    auto mergeBB = llvm::BasicBlock::Create(TheContext, "merge");
+    llvm::Function *function = Builder->GetInsertBlock()->getParent();
+    auto thenBB = llvm::BasicBlock::Create(*TheContext, "then");
+    auto elseBB = llvm::BasicBlock::Create(*TheContext, "else");
+    auto mergeBB = llvm::BasicBlock::Create(*TheContext, "merge");
     // what is merge
-    Builder.CreateCondBr(value, thenBB, elseBB);
+    Builder->CreateCondBr(value, thenBB, elseBB);
 
     bool need_merge = false;
-    function->GetBasicBlockList().push_back(thenBB);
-    Builder.SetInsertPoint(thenBB);
+    // function->insert(function->end(), thenBB);
+    function->getBasicBlockList().push_back(thenBB);
+    Builder->SetInsertPoint(thenBB);
     m_then->CodeGen();
-    if (Builder.GetInsertBlock()) {
+    if (Builder->GetInsertBlock()) {
         need_merge = true;
-        Builder.CreateBr(mergeBB);
+        Builder->CreateBr(mergeBB);
     }
-
-    function->GetBasicBlockList().push_back(elseBB);
-    Builder.SetInsertPoint(elseBB);
+    // function->insert(function->end(), elseBB);
+    function->getBasicBlockList().push_back(elseBB);
+    Builder->SetInsertPoint(elseBB);
     if (m_else) {
         m_else->CodeGen();
     }
-    if (Builder.GetInsertBlock()) {
+    if (Builder->GetInsertBlock()) {
         need_merge = true;
-        Builder.CreateBr(mergeBB);
+        Builder->CreateBr(mergeBB);
     }
 
     if (need_merge) {
-        function->getBasicBlockList().push_back(elseBB);
-        Builder.SetInsertPoint(mergeBB);
+        // function->insert(function->end(), mergeBB);
+        function->getBasicBlockList().push_back(mergeBB);
+        Builder->SetInsertPoint(mergeBB);
     }
 
-    */
     return nullptr;
 }
 llvm::Value *While::CodeGen() {
@@ -669,13 +669,13 @@ llvm::Value *While::CodeGen() {
         return nullptr;
     }
     llvm::Function *function = Builder->GetInsertBlock()->getParent();
-    llvm::BasicBlock *conditionBB = llvm::BasicBlock::Create(*TheContext, "cond", function);
-    llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(*TheContext, "body", function);
-    llvm::BasicBlock *continueBB = llvm::BasicBlock::Create(*TheContext, "cont", function);
+    llvm::BasicBlock *conditionBB = llvm::BasicBlock::Create(*TheContext, "cond");
+    llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(*TheContext, "body");
+    llvm::BasicBlock *continueBB = llvm::BasicBlock::Create(*TheContext, "cont");
 
     Builder->CreateBr(conditionBB);
     // function->insert(function->end(), conditionBB); // solve below bug
-    // function->getBasicBlockList().push_back(conditionBB); BUG!
+    function->getBasicBlockList().push_back(conditionBB);
     Builder->SetInsertPoint(conditionBB);
 
     llvm::Value *value = m_cond->CodeGen();
@@ -687,7 +687,8 @@ llvm::Value *While::CodeGen() {
     // );
     Builder->CreateCondBr(value, bodyBB, continueBB);
 
-    // function->getBasicBlockList().push_back(bodyBB);
+    // function->insert(function->end(), bodyBB);
+    function->getBasicBlockList().push_back(bodyBB);
     Builder->SetInsertPoint(bodyBB);
 
     loops.push({conditionBB, continueBB});
@@ -697,40 +698,38 @@ llvm::Value *While::CodeGen() {
     if (Builder->GetInsertBlock()) {
         Builder->CreateBr(conditionBB);
     }
-    // function->getBasicBlockList().push_back(continueBB);
+    // function->insert(function->end(), continueBB);
+    function->getBasicBlockList().push_back(continueBB);
     Builder->SetInsertPoint(continueBB);
 
     return nullptr;
     // */
 }
 llvm::Value *Break::CodeGen() {
-    /*
+    
     if (loops.empty()) {
         throw std::runtime_error("break statement outside of loop");
     }
-    if (!Builder.GetInsertBlock()) {
+    if (!Builder->GetInsertBlock()) {
         return nullptr;
     }
-    Builder.CreateBr(loops.top().breakBB);
-    Builder.ClearInsertionPoint();
-    */
+    Builder->CreateBr(loops.top().breakBB);
+    Builder->ClearInsertionPoint();
     return nullptr;
 }
 llvm::Value *Continue::CodeGen() {
-    /*
     if (loops.empty()) {
         throw std::runtime_error("continue statement outside of loop");
     }
-    if (!Builder.GetInsertBlock()) {
+    if (!Builder->GetInsertBlock()) {
         return nullptr;
     }
-    Builder.CreateBr(loops.top().continueBB);
-    Builder.ClearInsertionPoint();
-    */
+    Builder->CreateBr(loops.top().continueBB);
+    Builder->ClearInsertionPoint();
     return nullptr;
 }
 llvm::Value *Return::CodeGen() {
-    std::cerr<< "return codegen\n";
+    // std::cerr<< "return codegen\n";
     
     if (!Builder->GetInsertBlock()) {
         return nullptr;
@@ -749,8 +748,8 @@ llvm::Value *AstNode::CodeGen() {
     return nullptr;
 }
 llvm::Value *LValue::CodeGen() {
-    std::cerr<< "indices size: "<< indices().size()<< '\n';
-    std::cerr<<"L trans R \n";
+    // std::cerr<< "indices size: "<< indices().size()<< '\n';
+    // std::cerr<<"L trans R \n";
     auto t = symbolTable.get(ident().name());
     t = Builder->CreateLoad(llvm::Type::getInt32Ty(*ast::TheContext), t);
     // R = Builder->CreateLoad(R->getType()->getPointerElementType(), R);
