@@ -1,3 +1,10 @@
+int a;
+int func() {
+  return 2;
+}
 int main() {
-  1000+1;
+int a;
+  a = 3;
+  func();
+  return 1;
 }
