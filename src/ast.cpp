@@ -583,7 +583,20 @@ llvm::Value *ExprStmt::CodeGen() {
 
 
 llvm::Value *Call::CodeGen() {
-    return nullptr;
+    llvm::Function *function = TheModule->getFunction(m_func.name());
+
+    if (!function) {
+        throw std::runtime_error("function " + m_func.name() + " not found");
+    }
+    if (function->arg_size() != m_args.size()) {
+        throw std::runtime_error("invalid number of params for function " + m_func.name());
+    }
+    std::vector<llvm::Value *> values;
+    for (auto arg : m_args) {
+        values.emplace_back(arg->CodeGen());
+    }
+
+    return Builder.CreateCall(function, values);
 }
 
 llvm::Value *Assignment::CodeGen() 
