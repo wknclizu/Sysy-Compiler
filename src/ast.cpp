@@ -4,7 +4,6 @@
 #include "type.h"
 
 #include <cassert>
-#include <llvm/Config/llvm-config-x86_64.h>
 #include <llvm/IR/LLVMContext.h>
 #include <ostream>
 #include <stdexcept>
@@ -433,8 +432,18 @@ llvm::Value *BinaryExpr::CodeGen() {
             return Builder->CreateSub(L, R, "subtmp");
         case BinaryOp::Mul:
             return Builder->CreateMul(L, R, "multmp");
+        case BinaryOp::Div:
+            return Builder->CreateExactSDiv(L, R, "divtmp");
         case BinaryOp::Lt:
             return Builder->CreateICmpSLT(L, R, "ltcmp");
+        case BinaryOp::Leq:
+            return Builder->CreateICmpSLE(L, R, "lecmp");
+        case BinaryOp::Gt:
+            return Builder->CreateICmpSGT(L, R, "rtcmp");
+        case BinaryOp::Geq:
+            return Builder->CreateICmpSGE(L, R, "recmp");
+        case BinaryOp::Eq:
+            return Builder->CreateICmpEQ(L, R, "eqcmp");
         // case BinaryOp::Div:
         //     return Builder->CreateFDiv(L, R, "divtmp"); // TODO: 换成int的
         // case BinaryOp::Eq:
