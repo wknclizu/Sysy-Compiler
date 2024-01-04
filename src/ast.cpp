@@ -4,6 +4,7 @@
 #include "type.h"
 
 #include <cassert>
+#include <llvm/Config/llvm-config-x86_64.h>
 #include <llvm/IR/LLVMContext.h>
 #include <ostream>
 #include <stdexcept>
@@ -629,37 +630,47 @@ llvm::Value *IfElse::CodeGen() {
     llvm::Value *value = m_cond->CodeGen();
 
     llvm::Function *function = Builder->GetInsertBlock()->getParent();
-    auto thenBB = llvm::BasicBlock::Create(*TheContext, "then");
-    auto elseBB = llvm::BasicBlock::Create(*TheContext, "else");
-    auto mergeBB = llvm::BasicBlock::Create(*TheContext, "merge");
+    auto thenBB = llvm::BasicBlock::Create(*TheContext, "then", function);
+    auto elseBB = llvm::BasicBlock::Create(*TheContext, "else", function);
+    auto mergeBB = llvm::BasicBlock::Create(*TheContext, "merge", function);
     // what is merge
     Builder->CreateCondBr(value, thenBB, elseBB);
 
-    bool need_merge = false;
+    // bool need_merge = false;
+    // #if LLVM_VERSION_MAJOR == 17
     // function->insert(function->end(), thenBB);
-    function->getBasicBlockList().push_back(thenBB);
+    // #else
+    // function->getBasicBlockList().push_back(thenBB);
+    // #endif
     Builder->SetInsertPoint(thenBB);
     m_then->CodeGen();
     if (Builder->GetInsertBlock()) {
-        need_merge = true;
+        // need_merge = true;
         Builder->CreateBr(mergeBB);
     }
+    // #if LLVM_VERSION_MAJOR == 17
     // function->insert(function->end(), elseBB);
-    function->getBasicBlockList().push_back(elseBB);
+    // #else
+    // function->getBasicBlockList().push_back(elseBB);
+    // #endif
     Builder->SetInsertPoint(elseBB);
     if (m_else) {
         m_else->CodeGen();
     }
     if (Builder->GetInsertBlock()) {
-        need_merge = true;
+        // need_merge = true;
         Builder->CreateBr(mergeBB);
     }
+    // std::cerr<< "need_merge: "<< need_merge<< '\n';
 
-    if (need_merge) {
+    // if (need_merge) {
+        // #if LLVM_VERSION_MAJOR == 17
         // function->insert(function->end(), mergeBB);
-        function->getBasicBlockList().push_back(mergeBB);
+        // #else
+        // function->getBasicBlockList().push_back(mergeBB);
+        // #endif
         Builder->SetInsertPoint(mergeBB);
-    }
+    // }
 
     return nullptr;
 }
@@ -669,13 +680,16 @@ llvm::Value *While::CodeGen() {
         return nullptr;
     }
     llvm::Function *function = Builder->GetInsertBlock()->getParent();
-    llvm::BasicBlock *conditionBB = llvm::BasicBlock::Create(*TheContext, "cond");
-    llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(*TheContext, "body");
-    llvm::BasicBlock *continueBB = llvm::BasicBlock::Create(*TheContext, "cont");
+    llvm::BasicBlock *conditionBB = llvm::BasicBlock::Create(*TheContext, "cond", function);
+    llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(*TheContext, "body", function);
+    llvm::BasicBlock *continueBB = llvm::BasicBlock::Create(*TheContext, "cont", function);
 
     Builder->CreateBr(conditionBB);
-    // function->insert(function->end(), conditionBB); // solve below bug
-    function->getBasicBlockList().push_back(conditionBB);
+    // #if LLVM_VERSION_MAJOR == 17
+    // function->insert(function->end(), continueBB);
+    // #else
+    // function->getBasicBlockList().push_back(continueBB);
+    // #endif
     Builder->SetInsertPoint(conditionBB);
 
     llvm::Value *value = m_cond->CodeGen();
@@ -687,8 +701,11 @@ llvm::Value *While::CodeGen() {
     // );
     Builder->CreateCondBr(value, bodyBB, continueBB);
 
+    // #if LLVM_VERSION_MAJOR == 17
     // function->insert(function->end(), bodyBB);
-    function->getBasicBlockList().push_back(bodyBB);
+    // #else
+    // function->getBasicBlockList().push_back(bodyBB);
+    // #endif
     Builder->SetInsertPoint(bodyBB);
 
     loops.push({conditionBB, continueBB});
@@ -698,8 +715,11 @@ llvm::Value *While::CodeGen() {
     if (Builder->GetInsertBlock()) {
         Builder->CreateBr(conditionBB);
     }
+    // #if LLVM_VERSION_MAJOR == 17
     // function->insert(function->end(), continueBB);
-    function->getBasicBlockList().push_back(continueBB);
+    // #else
+    // function->getBasicBlockList().push_back(continueBB);
+    // #endif
     Builder->SetInsertPoint(continueBB);
 
     return nullptr;
@@ -714,7 +734,7 @@ llvm::Value *Break::CodeGen() {
         return nullptr;
     }
     Builder->CreateBr(loops.top().breakBB);
-    Builder->ClearInsertionPoint();
+    // Builder->ClearInsertionPoint();
     return nullptr;
 }
 llvm::Value *Continue::CodeGen() {
@@ -725,7 +745,7 @@ llvm::Value *Continue::CodeGen() {
         return nullptr;
     }
     Builder->CreateBr(loops.top().continueBB);
-    Builder->ClearInsertionPoint();
+    // Builder->ClearInsertionPoint();
     return nullptr;
 }
 llvm::Value *Return::CodeGen() {
@@ -736,7 +756,7 @@ llvm::Value *Return::CodeGen() {
     }
 
     if (m_res) {
-        Builder->CreateRet(m_res->CodeGen()); // ??
+        Builder->CreateRet(m_res->CodeGen());
     } else {
         Builder->CreateRetVoid();
     }

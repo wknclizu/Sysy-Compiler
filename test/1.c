@@ -22,16 +22,22 @@ int main() {
   } else {
     a = a + 1;
   }
+  if (a < 4) {
+    
+  }
+  // a = a - 1;
   // break;
   // continue;
-  while (a < 3) {
-    a = a - 1;
-    continue;
-  }
-  while (a < 10) {
+  // while (a < 3) {
+  //   a = a - 1;
+  //   continue;
+  //   a = a - 1;
+  //   break;
+  // }
+  while (a < 11) {
     a = a + 1;
-    break;
+    a = a + 3;
   }
 
-  return 1;
+  return 0;
 }
