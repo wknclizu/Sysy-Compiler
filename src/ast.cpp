@@ -410,6 +410,7 @@ std::string Call::to_string() const {
     return s;
 }
 llvm::Value *BinaryExpr::CodeGen() {
+    if (!Builder->GetInsertBlock()) {return nullptr;}
     llvm::Value *L = m_lhs->CodeGen();
     llvm::Value *R = m_rhs->CodeGen();
     // L->print(llvm::errs(), false); std::cerr<< '\n';
@@ -591,6 +592,7 @@ llvm::Value *Block::CodeGen() {
     return nullptr;
 }
 llvm::Value *ExprStmt::CodeGen() {
+    if (!Builder->GetInsertBlock()) {return nullptr;}
     auto t = m_expr->CodeGen();
     // if (t) {
     //     t->print(llvm::errs(), false);
@@ -600,6 +602,7 @@ llvm::Value *ExprStmt::CodeGen() {
 
 
 llvm::Value *Call::CodeGen() {
+    if (!Builder->GetInsertBlock()) {return nullptr;}
     llvm::Function *function = TheModule->getFunction(m_func.name());
 
     if (!function) {
@@ -626,6 +629,7 @@ llvm::Value *Call::CodeGen() {
 }
 
 llvm::Value *Assignment::CodeGen() {
+    if (!Builder->GetInsertBlock()) {return nullptr;}
     llvm::Value *lhs = symbolTable.get(m_lhs->ident().name());
     llvm::Value *rhs = m_rhs->CodeGen();
     // lhs->print(llvm::errs()); std::cerr<< '\n';
@@ -636,6 +640,7 @@ llvm::Value *Assignment::CodeGen() {
     return nullptr;
 }
 llvm::Value *IfElse::CodeGen() {
+    if (!Builder->GetInsertBlock()) {return nullptr;}
     llvm::Value *value = m_cond->CodeGen();
 
     llvm::Function *function = Builder->GetInsertBlock()->getParent();
@@ -743,7 +748,7 @@ llvm::Value *Break::CodeGen() {
         return nullptr;
     }
     Builder->CreateBr(loops.top().breakBB);
-    // Builder->ClearInsertionPoint();
+    Builder->ClearInsertionPoint();
     return nullptr;
 }
 llvm::Value *Continue::CodeGen() {
@@ -754,7 +759,7 @@ llvm::Value *Continue::CodeGen() {
         return nullptr;
     }
     Builder->CreateBr(loops.top().continueBB);
-    // Builder->ClearInsertionPoint();
+    Builder->ClearInsertionPoint();
     return nullptr;
 }
 llvm::Value *Return::CodeGen() {
@@ -777,6 +782,7 @@ llvm::Value *AstNode::CodeGen() {
     return nullptr;
 }
 llvm::Value *LValue::CodeGen() {
+    if (!Builder->GetInsertBlock()) {return nullptr;}
     // std::cerr<< "indices size: "<< indices().size()<< '\n';
     // std::cerr<<"L trans R \n";
     auto t = symbolTable.get(ident().name());
